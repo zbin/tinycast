@@ -788,13 +788,13 @@ struct AIProvidersPanel: View {
     }
 
     private func keyIsMissing(_ connection: AIConnection) -> Bool {
-        keyStatuses[connection.id] != true && !AIEndpointPolicy.isLoopback(connection.baseURL)
+        keyStatuses[connection.id] != true && !AIEndpointPolicy.isLocalNetwork(connection.baseURL)
             && !connectionsWithHeaders.contains(connection.id)
     }
 
     private func keyStatus(_ connection: AIConnection) -> String {
         if keyStatuses[connection.id] == true { return String(localized: "Stored in Keychain") }
-        if AIEndpointPolicy.isLoopback(connection.baseURL) {
+        if AIEndpointPolicy.isLocalNetwork(connection.baseURL) {
             return String(localized: "None needed locally")
         }
         return connectionsWithHeaders.contains(connection.id)

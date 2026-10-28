@@ -118,6 +118,7 @@ struct AIProviderTests {
         modelCatalogSearchesWithoutRenderingEverything()
         exactMatchNamesOnlyAWholeModel()
         endpointPolicyRejectsUnsafeRemoteURLs()
+        endpointPolicyAcceptsTheLocalNetworkAndNothingPastIt()
         storedKeysDoNotFollowARetargetedConnection()
         savingAConnectionDecidesItsKey()
         sseFramesSurviveSplits()
@@ -761,6 +762,55 @@ struct AIProviderTests {
         expect(
             (try? AIEndpointPolicy.validate("file:///etc/hosts")) == nil,
             "file URLs are not a provider")
+
+        // The scheme a reader types is whatever their keyboard produced; `URL` keeps that case.
+        expect(
+            (try? AIEndpointPolicy.validate("HTTPS://api.openai.com/v1")) != nil,
+            "an uppercased HTTPS scheme is the scheme, not an invalid URL")
+        expect(
+            (try? AIEndpointPolicy.validate("HTTP://127.0.0.1:11434/v1")) != nil,
+            "an uppercased HTTP scheme on a local endpoint is accepted")
+        expect(
+            (try? AIEndpointPolicy.validate("FTP://localhost/v1")) == nil,
+            "uppercasing does not smuggle in a scheme the transport cannot speak")
+        expect(
+            (try? AIEndpointPolicy.validate("HTTP://example.com/v1")) == nil,
+            "an uppercased scheme does not excuse a remote plaintext endpoint")
+    }
+
+    static func endpointPolicyAcceptsTheLocalNetworkAndNothingPastIt() {
+        for accepted in [
+            "http://10.0.0.5:11434/v1", "http://10.255.255.255/v1",
+            "http://172.16.0.1/v1", "http://172.31.255.255/v1",
+            "http://192.168.1.10:1234/v1", "http://192.168.255.255/v1",
+            "http://169.254.1.1/v1", "http://127.8.9.10/v1",
+            "http://[fd00::1]:11434/v1", "http://[fc00::1]/v1",
+            "http://[fe80::1]/v1", "http://[febf::1]/v1",
+            "http://[::ffff:192.168.1.1]:11434/v1", "http://[::ffff:127.0.0.1]/v1",
+            "http://100.64.0.1/v1", "http://100.80.110.125:5005/api/v1",
+            "http://100.127.255.255/v1",
+        ] {
+            expect(
+                (try? AIEndpointPolicy.validate(accepted)) != nil,
+                "\(accepted) is a local endpoint and may speak plain HTTP")
+        }
+        for rejected in [
+            "http://172.15.255.255/v1", "http://172.32.0.0/v1",
+            "http://192.167.255.255/v1", "http://192.169.0.0/v1",
+            "http://169.255.0.1/v1", "http://11.0.0.1/v1", "http://9.255.255.255/v1",
+            "http://100.63.255.255/v1", "http://100.128.0.0/v1",
+            "http://0.0.0.0/v1", "http://[2606:4700:4700::1111]/v1",
+            "http://[::ffff:8.8.8.8]/v1", "http://[fec0::1]/v1", "http://[fe00::1]/v1",
+            "http://10.0.0.5.nip.io/v1", "http://localhost.evil.com/v1",
+        ] {
+            expect(
+                (try? AIEndpointPolicy.validate(rejected)) == nil,
+                "\(rejected) is not on the local network, so plain HTTP stays refused")
+        }
+        expect(
+            (try? AIEndpointPolicy.validate("https://10.0.0.5/v1")) != nil
+                && (try? AIEndpointPolicy.validate("https://8.8.8.8/v1")) != nil,
+            "HTTPS is the answer for every host the plaintext exemption does not cover")
     }
 
     static func storedKeysDoNotFollowARetargetedConnection() {

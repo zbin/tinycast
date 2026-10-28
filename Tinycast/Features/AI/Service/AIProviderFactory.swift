@@ -79,7 +79,8 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable(
                     String(localized: "The request headers could not be read from Keychain."))
             }
-            guard AIEndpointPolicy.isLoopback(connection.baseURL) || !key.isEmpty || !headers.isEmpty
+            guard AIEndpointPolicy.isLocalNetwork(connection.baseURL) || !key.isEmpty
+                || !headers.isEmpty
             else {
                 throw AIProviderError.unavailable(String(localized: "Add an API key in Settings."))
             }

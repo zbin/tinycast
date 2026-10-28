@@ -15,7 +15,7 @@ enum AIConnectionKeyPolicy {
     ) -> Outcome {
         let key = enteredKey.trimmingCharacters(in: .whitespacesAndNewlines)
         if !key.isEmpty { return .store(key) }
-        let keyIsOptional = hasHeaders || AIEndpointPolicy.isLoopback(connection.baseURL)
+        let keyIsOptional = hasHeaders || AIEndpointPolicy.isLocalNetwork(connection.baseURL)
         let retargeted =
             hasStoredKey && saved.map { !AIEndpointPolicy.sameDestination(connection, $0) } == true
         if retargeted {

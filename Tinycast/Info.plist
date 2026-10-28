@@ -61,6 +61,20 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<!-- Tailscale and other overlays hand out 100.64.0.0/10 (RFC 6598). ATS exempts the RFC 1918
+	     blocks on its own but not this one, so a plaintext endpoint there fails as -1022 before the
+	     request leaves the app. Kept to exactly the range AIEndpointPolicy also accepts. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>100.64.0.0/10</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>

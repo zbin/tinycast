@@ -407,13 +407,13 @@ enum AIEndpointPolicy {
 
     static func validate(_ value: String) throws -> URL {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Only the two schemes the transport speaks: `ftp://localhost` was once a valid provider.
+        // Two schemes only, compared case-insensitively: `ftp://localhost` was once a valid provider.
         guard let url = URL(string: value), let host = url.host(),
-            url.scheme == "https" || url.scheme == "http"
+            let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http"
         else {
             throw ValidationError.invalidURL
         }
-        guard url.scheme == "https" || isLoopback(host: host) else {
+        guard scheme == "https" || isLocalNetwork(host: host) else {
             throw ValidationError.insecureRemoteURL
         }
         return url
@@ -424,12 +424,45 @@ enum AIEndpointPolicy {
         connection.provider == other.provider && connection.baseURL == other.baseURL
     }
 
-    static func isLoopback(_ value: String) -> Bool {
+    /// Stays inside App Transport Security's exemption: nothing accepted here fails later as -1022.
+    static func isLocalNetwork(_ value: String) -> Bool {
         guard let host = URL(string: value)?.host() else { return false }
-        return isLoopback(host: host)
+        return isLocalNetwork(host: host)
     }
 
-    private static func isLoopback(host: String) -> Bool {
-        ["localhost", "127.0.0.1", "::1"].contains(host.lowercased())
+    private static func isLocalNetwork(host: String) -> Bool {
+        if host.lowercased() == "localhost" { return true }
+        if let bytes = ipv6Bytes(host) { return isLocalIPv6(bytes) }
+        guard let bytes = ipv4Bytes(host) else { return false }
+        return isPrivateIPv4(bytes)
+    }
+
+    private static func isLocalIPv6(_ bytes: [UInt8]) -> Bool {
+        // An IPv4-mapped address is an IPv4 endpoint wearing brackets.
+        if bytes[0..<10].allSatisfy({ $0 == 0 }), bytes[10] == 0xFF, bytes[11] == 0xFF {
+            return isPrivateIPv4(Array(bytes[12..<16]))
+        }
+        if bytes[0...14].allSatisfy({ $0 == 0 }), bytes[15] == 1 { return true }
+        return bytes[0] & 0xFE == 0xFC || (bytes[0] == 0xFE && bytes[1] & 0xC0 == 0x80)
+    }
+
+    private static func isPrivateIPv4(_ bytes: [UInt8]) -> Bool {
+        switch (bytes[0], bytes[1]) {
+        case (10, _), (100, 64...127), (127, _), (169, 254), (192, 168): return true
+        case (172, 16...31): return true
+        default: return false
+        }
+    }
+
+    private static func ipv4Bytes(_ host: String) -> [UInt8]? {
+        var address = in_addr()
+        guard inet_pton(AF_INET, host, &address) == 1 else { return nil }
+        return withUnsafeBytes(of: address) { Array($0) }
+    }
+
+    private static func ipv6Bytes(_ host: String) -> [UInt8]? {
+        var address = in6_addr()
+        guard inet_pton(AF_INET6, host, &address) == 1 else { return nil }
+        return withUnsafeBytes(of: address) { Array($0) }
     }
 }

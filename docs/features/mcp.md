@@ -27,7 +27,7 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   registration and tokens are one JSON item per server under `KeychainSecretStore.mcpSecrets`, and
   never enter logs, errors or backups.
 - **Remote endpoints require HTTPS**, through the same `AIEndpointPolicy.validate` the AI providers
-  use — plain HTTP only for `localhost`, `127.0.0.1` and `::1`, and no other scheme at all. There is
+  use — plain HTTP only for `localhost` and the local network, and no other scheme at all. There is
   one place that decides this and MCP does not get a second one.
 - **OAuth tokens belong to one configured MCP endpoint.** Editing its URL cannot lend its token to
   the new destination. Discovery validates every endpoint; private ephemeral sessions have no URL,

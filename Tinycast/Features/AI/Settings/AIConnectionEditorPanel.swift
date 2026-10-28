@@ -209,7 +209,7 @@ struct AIConnectionEditorPanel: View {
         switch discovery {
         case .waitingForKey:
             ForEach(connection.models, id: \.self) { model in selectedModelRow(model) }
-            if AIEndpointPolicy.isLoopback(connection.baseURL) {
+            if AIEndpointPolicy.isLocalNetwork(connection.baseURL) {
                 Label("Checking this local endpoint for models…", systemImage: "network")
                     .foregroundStyle(.secondary)
             } else {
@@ -379,7 +379,7 @@ struct AIConnectionEditorPanel: View {
     private var apiKeyPlaceholder: String {
         if storedKeyMatchesTarget { return String(localized: "Leave blank to keep saved key") }
         if !headers.isEmpty { return String(localized: "Optional with request headers") }
-        if AIEndpointPolicy.isLoopback(connection.baseURL) {
+        if AIEndpointPolicy.isLocalNetwork(connection.baseURL) {
             return String(localized: "Optional for local endpoint")
         }
         return String(localized: "Paste API key")
@@ -429,7 +429,7 @@ struct AIConnectionEditorPanel: View {
                     allowsManualEntry: false)
                 return
             }
-        } else if AIEndpointPolicy.isLoopback(connection.baseURL) || !requestHeaders.isEmpty {
+        } else if AIEndpointPolicy.isLocalNetwork(connection.baseURL) || !requestHeaders.isEmpty {
             apiKey = ""
         } else {
             discovery = .waitingForKey

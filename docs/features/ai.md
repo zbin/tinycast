@@ -64,9 +64,18 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   headers are one JSON item per connection in `KeychainSecretStore.aiRequestHeaders`. They are visible
   rows in the editor rather than a hidden saved value, so they are saved with whatever endpoint the
   connection is saved with, and removing a connection deletes them with its key.
-- **Remote endpoints require HTTPS.** Plain HTTP is accepted only for `localhost`, `127.0.0.1` and
-  `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
-  not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
+- **Remote endpoints require HTTPS.** Plain HTTP is accepted for `localhost` and for any address on
+  the local network — the RFC 1918 blocks, loopback, link-local (including IPv6 `fe80::/10`), IPv6
+  unique-local `fc00::/7`, RFC 6598 `100.64.0.0/10` (what Tailscale and other overlays hand out),
+  and IPv4-mapped forms of those — where a key is optional. Everything else needs `https`, and any
+  other scheme is rejected outright: a local host does not excuse `ftp://`. `AIEndpointPolicy` is the
+  one place that decides this.
+- **Every range the policy accepts is also exempted from ATS in `Info.plist`.** These are two
+  independent gates and both must open: the policy refuses the endpoint, and ATS refuses the request
+  as `-1022` before it leaves the app. ATS exempts RFC 1918, loopback and link-local on its own, but
+  **not** `100.64.0.0/10` — that one needs `NSExceptionDomains`, or an overlay endpoint passes the
+  policy and then fails at the network layer. Adding a range to one list without the other is the
+  failure mode this pair exists to prevent.
 - **MCP OAuth is separate from the model provider's login.** The HTTP MCP client can sign into a
   hosted server from Settings and keep its client credentials and tokens in that server's Keychain
   item. API chat uses this session without receiving its credentials. A rejected refresh becomes
